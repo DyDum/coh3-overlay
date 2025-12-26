@@ -15,17 +15,17 @@ export const modesMap = {
 
 // 🎯 Correspondance leaderboard_id → faction
 export const factionMap = {
-  2130255: "American", 2130257: "British", 2130259: "DAK", 2130261: "German",
-  2130300: "American", 2130302: "British", 2130304: "DAK", 2130306: "German",
-  2130329: "American", 2130331: "British", 2130333: "DAK", 2130335: "German",
-  2130353: "American", 2130356: "British", 2130358: "DAK", 2130360: "German"
+  2130255: "US", 2130257: "UK", 2130259: "DAK", 2130261: "WEHR",
+  2130300: "US", 2130302: "UK", 2130304: "DAK", 2130306: "WEHR",
+  2130329: "US", 2130331: "UK", 2130333: "DAK", 2130335: "WEHR",
+  2130353: "US", 2130356: "UK", 2130358: "DAK", 2130360: "WEHR"
 };
 
 /**
  * formate les nombres (victoires/défaites) sous la forme 02/03
  */
 export function fmt(obj) {
-  return `${String(Math.max(0,obj.w)).padStart(2,"0")}/${String(Math.max(0,obj.l)).padStart(2,"0")}`;
+  return `${String(Math.max(0,obj.w)).padStart(1,"0")}W/${String(Math.max(0,obj.l)).padStart(1,"0")}L`;
 }
 
 /**

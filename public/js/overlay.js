@@ -1,23 +1,26 @@
 /*
  * overlay.js
  * ──────────
- * Sert à récupérer périodiquement les statistiques via ton serveur local
- * et à afficher la différence avec la snapshot (session.json).
- * 
- * Rafraîchit toutes les 15 secondes.
+ * Gère l’affichage de l’overlay de statistiques COH3.
+ * Le script interroge le serveur local (proxy) pour :
+ *   - récupérer les statistiques en direct depuis coh3stats.com (API)
+ *   - comparer avec un snapshot local (session.json)
+ *   - afficher la différence (victoires/défaites) par mode, faction ou camp
+ * Rafraîchissement automatique toutes les 15 secondes.
  */
 
 import { modesMap, factionMap, fmt, summarize } from './utils.js';
 
+// URLs locales exposées par ton serveur Node/Express
 const API_URL = '/api/stats';
 const SESSION_URL = '/api/session';
 
 /**
- * Fonction principale exécutée à chaque refresh
+ * Fonction principale – met à jour le texte affiché sur l’overlay.
  */
 async function updateOverlay() {
   try {
-    // Récupère les stats live + la session de référence
+    // Récupère les statistiques live + le snapshot (si disponible)
     const [liveRes, snapRes] = await Promise.all([
       fetch(API_URL),
       fetch(SESSION_URL)
@@ -26,60 +29,118 @@ async function updateOverlay() {
     const liveData = await liveRes.json();
     const snapData = snapRes.ok ? await snapRes.json() : { all: {} };
 
-    // Conversion des deux structures en objets homogènes
-    const now = summarize(liveData.RelicProfile?.leaderboardStats || []);
+    // Convertit les structures API en objets simplifiés
+    const now = summarize(liveData.leaderboardStats || []);
     const base = summarize(snapData);
 
-    // Récupère les préférences d’affichage
+    // Préférences utilisateur sauvegardées par config.html
     const visible = JSON.parse(localStorage.getItem('visibleModes') || '["1v1","2v2","3v3","4v4"]');
     const mode = localStorage.getItem('displayMode') || 'size';
 
     let line = '';
 
-    /**
-     * MODE "FACTION"
-     * Agrège les victoires/défaites par faction (US, British, DAK, Wehr)
-     * en filtrant les modes qui ne sont pas cochés dans ta config.
-     */
-    if (mode === "faction") {
-      const factions = { 'American': {w:0,l:0}, 'British': {w:0,l:0}, 'DAK': {w:0,l:0}, 'German': {w:0,l:0} };
-      for (const id in now.all) {
-        const f = factionMap[id], m = modesMap[id];
-        if (!visible.includes(m)) continue; // ignore les modes non sélectionnés
-        const curr = now.all[id] || {w:0,l:0};
-        const baseStats = base.all[id] || {w:curr.w, l:curr.l}; // fallback si pas de snapshot
-        factions[f].w += Math.max(0, curr.w - baseStats.w);
-        factions[f].l += Math.max(0, curr.l - baseStats.l);
-      }
-      line = Object.entries(factions).map(([f,v]) => `${f}: ${fmt(v)}`).join("    ");
-    }
+    // ───────────────────────────────────────────────
+    //  MODE "TEAM" : Alliés / Axe par format
+    // ───────────────────────────────────────────────
+    if (mode === 'team') {
+      const camps = {
+        '1v1-allies': {w:0, l:0}, '1v1-axis': {w:0, l:0},
+        '2v2-allies': {w:0, l:0}, '2v2-axis': {w:0, l:0},
+        '3v3-allies': {w:0, l:0}, '3v3-axis': {w:0, l:0},
+        '4v4-allies': {w:0, l:0}, '4v4-axis': {w:0, l:0},
+      };
 
-    /**
-     * MODE "SIZE"
-     * Agrège les victoires/défaites par format de partie (1v1, 2v2, etc.)
-     */
-    else {
-      const totals = { "1v1":{w:0,l:0}, "2v2":{w:0,l:0}, "3v3":{w:0,l:0}, "4v4":{w:0,l:0} };
       for (const id in now.all) {
         const m = modesMap[id];
-        if (!visible.includes(m)) continue;
+        const f = factionMap[id];
+        if (!visible.includes(m) || !f) continue; // ne garde que les modes sélectionnés
+
+        const side = ['DAK','German'].includes(f) ? 'axis' : 'allies';
+        const key = `${m}-${side}`;
+
+        const n = now.all[id] || { w:0, l:0 };
+        const b = base.all[id] || { w:n.w, l:n.l };
+        const diffW = Math.max(0, n.w - b.w);
+        const diffL = Math.max(0, n.l - b.l);
+
+        if (camps[key]) {
+          camps[key].w += diffW;
+          camps[key].l += diffL;
+        }
+      }
+
+      // Filtrer par modes sélectionnés
+      line = Object.entries(camps)
+        .filter(([k]) => visible.includes(k.split('-')[0]))
+        .map(([k,v]) => `${k}:${fmt(v)}`)
+        .join('    ');
+    }
+
+    // ───────────────────────────────────────────────
+    //  MODE "FACTION" : US / British / DAK / German
+    // ───────────────────────────────────────────────
+    else if (mode === 'faction') {
+      const factions = { 'US':{w:0,l:0}, 'UK':{w:0,l:0}, 'DAK':{w:0,l:0}, 'WEHR':{w:0,l:0} };
+
+      for (const id in now.all) {
+        const f = factionMap[id];
+        const m = modesMap[id];
+        if (!visible.includes(m) || !f) continue; // ignore modes non cochés
+
+        const n = now.all[id] || {w:0,l:0};
+        const b = base.all[id] || {w:n.w, l:n.l};
+        const diffW = Math.max(0, n.w - b.w);
+        const diffL = Math.max(0, n.l - b.l);
+
+        factions[f].w += diffW;
+        factions[f].l += diffL;
+      }
+
+      // Afficher uniquement les factions pertinentes (qui ont bougé)
+      const relevant = Object.entries(factions)
+
+      const display = (relevant.length ? relevant : Object.entries(factions));
+      line = display.map(([f,v]) => `${f}:${fmt(v)}`).join('    ');
+    }
+
+    // ───────────────────────────────────────────────
+    //  MODE "SIZE" : 1v1 / 2v2 / 3v3 / 4v4
+    // ───────────────────────────────────────────────
+    else {
+      const totals = { "1v1":{w:0,l:0}, "2v2":{w:0,l:0}, "3v3":{w:0,l:0}, "4v4":{w:0,l:0} };
+
+      for (const id in now.all) {
+        const m = modesMap[id];
+        if (!visible.includes(m)) continue; // filtre sur sélection
+
         const n = now.all[id] || {w:0,l:0};
         const b = base.all[id] || {w:n.w, l:n.l};
         totals[m].w += Math.max(0, n.w - b.w);
         totals[m].l += Math.max(0, n.l - b.l);
       }
-      line = Object.entries(totals).map(([m,v]) => `${m}: ${fmt(v)}`).join("    ");
+
+      // 🔍 n'affiche QUE les modes cochés
+      line = Object.entries(totals)
+        .filter(([mode]) => visible.includes(mode))
+        .map(([m,v]) => `${m}:${fmt(v)}`)
+        .join('    ');
     }
 
-    // Mise à jour de l’affichage visible sur Streamlabs
-    document.getElementById("statsLine").textContent = line || "Session en attente...";
-  } 
+    // ───────────────────────────────────────────────
+    //  Affichage final dans l’overlay
+    // ───────────────────────────────────────────────
+    document.getElementById('statsLine').textContent = line || 'Session en attente...';
+  }
+
+  // Gestion des erreurs API ou JSON
   catch (e) {
-    console.error("Erreur overlay:", e);
-    document.getElementById("statsLine").textContent = "Erreur API";
+    console.error('Erreur overlay:', e);
+    document.getElementById('statsLine').textContent = 'Erreur API';
   }
 }
 
-// Premier appel + rafraîchissement toutes les 15s
+// Premier rafraîchissement immédiat
 updateOverlay();
+
+// Rafraîchissement automatique toutes les 15 s
 setInterval(updateOverlay, 15000);

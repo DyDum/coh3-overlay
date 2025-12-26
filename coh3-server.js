@@ -75,10 +75,10 @@ app.post('/api/set-player', (req, res) => {
 app.get('/api/stats', async (req, res) => {
   try {
     const id = req.query.id || getPlayerId();
-    const API_URL = `https://us-east4-coh3-stats-prod.cloudfunctions.net/sharedAPIGen2Http/players/${id}`;
+    const API_URL = `https://coh3-api.reliclink.com/community/leaderboard/getpersonalstat?profile_ids=[${id}]&title=coh3`;
 
     const response = await fetch(API_URL, {
-      headers: { 'Origin': 'https://coh3stats.com' }  // simulateur d'origine pour éviter blocage CORS
+      //headers: { 'Origin': 'https://coh3stats.com' }  // simulateur d'origine pour éviter blocage CORS
     });
     const data = await response.json();
     res.json(data);
@@ -97,15 +97,15 @@ app.get('/api/stats', async (req, res) => {
  */
 app.post('/api/start-session', async (req, res) => {
   const id = req.query.id || getPlayerId();
-  const API_URL = `https://us-east4-coh3-stats-prod.cloudfunctions.net/sharedAPIGen2Http/players/${id}`;
+  const API_URL = `https://coh3-api.reliclink.com/community/leaderboard/getpersonalstat?profile_ids=[${id}]&title=coh3`;
 
   try {
     // Récupère les stats actuelles du joueur depuis l’API COH3Stats
-    const response = await fetch(API_URL, { headers: { 'Origin': 'https://coh3stats.com' } });
+    const response = await fetch(API_URL, { headers: {  } });
     const data = await response.json();
     
     // Extrait les stats détaillées pour tous les modes
-    const snapshot = data.RelicProfile?.leaderboardStats || [];
+    const snapshot = data.leaderboardStats || [];
 
     // Sauvegarde dans /data/session.json
     if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
