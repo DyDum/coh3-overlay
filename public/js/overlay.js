@@ -100,7 +100,7 @@ async function updateOverlay() {
       const relevant = Object.entries(factions)
 
       const display = (relevant.length ? relevant : Object.entries(factions));
-      line = display.map(([f,v]) => `${f}:${fmt(v)}`).join('    ');
+      line = display.map(([f,v]) => `${f}:${fmt(v)}`).join('  ');
     }
 
     // ───────────────────────────────────────────────
@@ -123,7 +123,7 @@ async function updateOverlay() {
       line = Object.entries(totals)
         .filter(([mode]) => visible.includes(mode))
         .map(([m,v]) => `${m}:${fmt(v)}`)
-        .join('    ');
+        .join('  ');
     }
 
     // ───────────────────────────────────────────────
@@ -135,7 +135,7 @@ async function updateOverlay() {
   // Gestion des erreurs API ou JSON
   catch (e) {
     console.error('Erreur overlay:', e);
-    document.getElementById('statsLine').textContent = 'Erreur API';
+    //document.getElementById('statsLine').textContent = 'Erreur API';
   }
 }
 

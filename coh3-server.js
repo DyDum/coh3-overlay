@@ -14,6 +14,25 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 
+// ───── PID ─────
+// Fichier PID dans le même dossier que server.js
+const pidFile = path.join(__dirname, "server.pid");
+
+try {
+  fs.writeFileSync(pidFile, process.pid.toString(), "utf8");
+  console.log(`💾 PID enregistré (${process.pid}) dans ${pidFile}`);
+} catch (err) {
+  console.error("❌ Impossible d'écrire le fichier PID :", err);
+}
+
+// Quand le processus se termine, on nettoie le fichier
+process.on("exit", () => {
+  try {
+    if (fs.existsSync(pidFile)) fs.unlinkSync(pidFile);
+    console.log("🧹 Fichier PID supprimé proprement");
+  } catch (e) {}
+});
+
 // ───── Configuration de base ─────
 const app = express();
 const PORT = 3000;
