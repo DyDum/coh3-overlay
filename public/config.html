@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Configuration COH3 Overlay</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="config">
+  <h2>⚙️ Configuration Overlay COH3</h2>
+
+  <label>ID Joueur (coh3stats): 
+    <input type="text" id="playerId" placeholder="ex: 455809" style="width:200px;">
+  </label>
+  <button id="savePlayer">💾 Sauvegarder joueur</button>
+
+  <h3>Modes à afficher</h3>
+  <label><input type="checkbox" value="1v1" checked> 1v1</label>
+  <label><input type="checkbox" value="2v2" checked> 2v2</label>
+  <label><input type="checkbox" value="3v3" checked> 3v3</label>
+  <label><input type="checkbox" value="4v4" checked> 4v4</label>
+
+  <h3>Mode d'affichage</h3>
+  <select id="displayMode">
+    <option value="team">Alliés / Axe</option>
+    <option value="faction">Factions</option>
+    <option value="size" selected>Tailles (1v1 / 2v2 / ...)</option>
+  </select>
+
+  <div style="margin-top:15px;">
+    <button id="save">💾 Sauvegarder configuration</button>
+    <button id="start">🚀 Démarrer session</button>
+  </div>
+
+  <div id="msg"></div>
+
+  <script type="module" src="js/config.js"></script>
+</body>
+</html>

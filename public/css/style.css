@@ -1,0 +1,34 @@
+body {
+  margin: 0;
+  font-family: Consolas, monospace;
+  color: white;
+  background: transparent;
+}
+
+#statsLine {
+  background: rgba(0,0,0,0.75);
+  padding: 8px 20px;
+  font-size: 28px;
+  border-radius: 6px;
+  white-space: pre;
+}
+
+/* Page Config */
+.config {
+  background: #111;
+  color: #eee;
+  font-family: sans-serif;
+  padding: 20px;
+  max-width: 600px;
+}
+.config label {
+  display: block;
+  margin: 8px 0;
+}
+.config input, .config select, .config button {
+  margin-top: 5px;
+  padding: 6px 12px;
+  font-size: 14px;
+}
+.config button { cursor: pointer; }
+#msg { margin-top:15px;color:#6f6;font-weight:bold;opacity:0;transition:.3s; }
