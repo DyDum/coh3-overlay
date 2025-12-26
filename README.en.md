@@ -11,7 +11,7 @@ It displays your **live stats and match results** from [coh3stats.com](https://c
 - 🧮 **Session difference tracking** — see wins/losses since the last “Start”  
 - 🧭 **Three display modes** :
   - By match size : `1v1`, `2v2`, `3v3`, `4v4`  
-  - By faction : `US`, `British`, `DAK`, `Wehrmacht`  
+  - By faction : `US`, `UK`, `DAK`, `WEHR`  
   - By side : `Allies` / `Axis`  
 - 🛠️ **Separate configuration page** (select modes, factions, player ID)  
 - 🔁 **Auto‑refresh** every 15 seconds  
@@ -24,7 +24,7 @@ It displays your **live stats and match results** from [coh3stats.com](https://c
 ## 🪜 Quick Setup
 
 ### 1️⃣ Clone the project
-```git clone https://github.com/<your-username>/coh3-overlay.git
+```git clone https://github.com/dydum77/coh3-overlay.git
 cd coh3-overlay
 npm install
 ```
@@ -34,8 +34,6 @@ npm install
 ### 2️⃣ Start the local server
 
 ```
-npm run dev
-or
 node coh3-server.js
 ```
 
@@ -106,7 +104,7 @@ coh3-overlay/
 
 or, if “Faction” mode selected:
 
-`American: 07/02 British: 05/01 DAK: 01/01 German: 04/03`
+`US: 07/02 UK: 05/01 DAK: 01/01 WEHR: 04/03`
 
 ---
 

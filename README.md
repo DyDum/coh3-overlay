@@ -11,7 +11,7 @@ Il affiche en **temps réel** vos statistiques, parties et performances depuis [
 - 🧮 **Différences de session** : compte vos victoires/défaites depuis le clic “Start”  
 - 🧭 **3 modes d’affichage** :
   - Par format de partie : `1v1`, `2v2`, `3v3`, `4v4`
-  - Par faction : `US`, `British`, `DAK`, `Wehrmacht`
+  - Par faction : `US`, `UK`, `DAK`, `WEHR`
   - Par camp : `Alliés` / `Axe`
 - 🛠️ **Page de configuration** dédiée (sélection des modes, faction, joueur)  
 - 🔁 **Rafraîchissement automatique** toutes les 15 secondes  
@@ -26,7 +26,7 @@ Il affiche en **temps réel** vos statistiques, parties et performances depuis [
 ### 1️⃣ Clonage du projet
 
 ```
-git clone https://github.com/<ton-user>/coh3-overlay.git
+git clone https://github.com/dydum77/coh3-overlay.git
 cd coh3-overlay
 npm install
 ```
@@ -36,8 +36,6 @@ npm install
 ### 2️⃣ Lancement du serveur
 
 ```
-npm run dev
-OU
 node coh3-server.js
 ```
 
@@ -109,7 +107,7 @@ coh3-overlay/
 
 ou selon la vue “Faction” :
 
-```American: 07/02 British: 05/01 Durch: 01/01 German: 04/03```
+```US: 07/02 UK: 05/01 DAK: 01/01 WEHR: 04/03```
 
 
 ---
@@ -131,7 +129,7 @@ Tu peux l’utiliser, le modifier et le redistribuer librement à condition de c
 
 ## 💬 Auteurs
 
-👤 **DyDyum77**
+👤 **DyDum77**
 ---
 
 ### 🌟 N’hésite pas à ajouter une ⭐ sur GitHub si ce projet t’a aidé !
