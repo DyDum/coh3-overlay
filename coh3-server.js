@@ -49,7 +49,23 @@ app.use(express.static('public'));  // sert les fichiers HTML/JS/CSS
 app.use(express.json());        // parse automatiquement les corps JSON
 
 // ──────────────────────────────────────────────
-//    FONCTIONS UTILITAIRES
+//    FONCTION UTILITAIRES : obtenir l’ID joueur
+// ──────────────────────────────────────────────
+
+/**
+ * Lecture de l’ID joueur depuis "data/player.json".
+ * Si le fichier n’existe pas, ou l’ID est manquant, retourne "455809" par défaut.
+ */
+function getPlayerData() {
+  if (fs.existsSync(PLAYER_FILE)) {
+    return JSON.parse(fs.readFileSync(PLAYER_FILE, 'utf8'));
+  }
+  // si pas de fichier, on retourne un objet par défaut
+  return { id: playerID, lastLaunch: null };
+}
+
+// ──────────────────────────────────────────────
+//    FONCTION UTILITAIRES : obtenir la date du dernier snapshot
 // ──────────────────────────────────────────────
 
 /**
@@ -57,11 +73,84 @@ app.use(express.json());        // parse automatiquement les corps JSON
  * Si le fichier n’existe pas, ou l’ID est manquant, retourne "455809" par défaut.
  */
 function getPlayerId() {
-  if (fs.existsSync(PLAYER_FILE)) {
-    const { id } = JSON.parse(fs.readFileSync(PLAYER_FILE, 'utf8'));
-    return id || playerID;
+  const { id } = getPlayerData();
+  return id || playerID;
+}
+// ──────────────────────────────────────────────
+//    FONCTION UTILITAIRE : vérifier si deux timestamps sont le même jour
+// ──────────────────────────────────────────────
+
+function isSameDay(ts1, ts2) {
+  if (!ts1 || !ts2) return false;
+
+  const d1 = new Date(ts1);
+  const d2 = new Date(ts2);
+
+  return (
+    d1.getFullYear() === d2.getFullYear() &&
+    d1.getMonth() === d2.getMonth() &&
+    d1.getDate() === d2.getDate()
+  );
+}
+
+// ──────────────────────────────────────────────
+//    FONCTION UTILITAIRE : snapshot automatique
+// ──────────────────────────────────────────────
+async function autoSnapshot() {
+  const now = Date.now();
+  const nowDate = new Date(now);
+  const hour = nowDate.getHours(); // 0–23
+
+  const playerData = getPlayerData();
+  const lastLaunch = playerData.lastLaunch; // timestamp du dernier snapshot (ou null)
+
+  // 1) Ne jamais faire de snapshot avant 10h
+  if (hour < 10) {
+    console.log(`⏰ Il est ${hour}h, pas de snapshot automatique (seulement après 10h).`);
+    return;
   }
-  return playerID;
+
+  // 2) Si déjà un snapshot aujourd’hui → ne rien faire
+  if (lastLaunch && isSameDay(now, lastLaunch)) {
+    console.log('📅 Un snapshot a déjà été fait aujourd’hui, pas de snapshot automatique.');
+    return;
+  }
+
+  // 3) Sinon, premier lancement de la journée après 10h → snapshot
+  const id = getPlayerId();
+  console.log(`🕙 Premier lancement de la journée après 10h, création automatique d'un snapshot pour le joueur ${id}...`);
+  try {
+    await createSessionSnapshot(id);
+    console.log('✅ Snapshot automatique créé avec succès.');
+  } catch (err) {
+    console.error('❌ Erreur lors du snapshot automatique :', err);
+  }
+}
+
+// ──────────────────────────────────────────────
+//    FONCTION UTILITAIRE : créer un snapshot
+// ──────────────────────────────────────────────
+async function createSessionSnapshot(id) {
+  const API_URL = `https://coh3-api.reliclink.com/community/leaderboard/getpersonalstat?profile_ids=[${id}]&title=coh3`;
+  const response = await fetch(API_URL, {});
+  const data = await response.json();
+
+  const snapshot = data.leaderboardStats || [];
+
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
+  fs.writeFileSync(SESSION_FILE, JSON.stringify(snapshot, null, 2), 'utf8');
+
+  // --- mise à jour du timestamp dans player.json ---
+  const playerData = getPlayerData();
+  const updatedPlayerData = {
+    ...playerData,
+    id, // on force l'id courant
+    lastLaunch: Date.now()
+  };
+
+  fs.writeFileSync(PLAYER_FILE, JSON.stringify(updatedPlayerData, null, 2), 'utf8');
+
+  return snapshot;
 }
 
 // ──────────────────────────────────────────────
@@ -74,11 +163,15 @@ function getPlayerId() {
 app.post('/api/set-player', (req, res) => {
   const id = req.query.id;
   if (!id) return res.status(400).json({ error: 'ID manquant' });
-  
-  // Crée le dossier "data" s’il n’existe pas encore
+
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
 
-  fs.writeFileSync(PLAYER_FILE, JSON.stringify({ id }), 'utf8');
+  const playerData = {
+    id,
+    lastLaunch: Date.now()
+  };
+
+  fs.writeFileSync(PLAYER_FILE, JSON.stringify(playerData, null, 2), 'utf8');
   res.json({ message: `✅ Joueur défini sur ${id}` });
 });
 
@@ -96,15 +189,14 @@ app.get('/api/stats', async (req, res) => {
     const id = req.query.id || getPlayerId();
     const API_URL = `https://coh3-api.reliclink.com/community/leaderboard/getpersonalstat?profile_ids=[${id}]&title=coh3`;
 
-    const response = await fetch(API_URL, {
-      //headers: { 'Origin': 'https://coh3stats.com' }  // simulateur d'origine pour éviter blocage CORS
-    });
+    const response = await fetch(API_URL, {});
     const data = await response.json();
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 // ──────────────────────────────────────────────
 //    ROUTE: /api/start-session
@@ -116,21 +208,9 @@ app.get('/api/stats', async (req, res) => {
  */
 app.post('/api/start-session', async (req, res) => {
   const id = req.query.id || getPlayerId();
-  const API_URL = `https://coh3-api.reliclink.com/community/leaderboard/getpersonalstat?profile_ids=[${id}]&title=coh3`;
 
   try {
-    // Récupère les stats actuelles du joueur depuis l’API COH3Stats
-    const response = await fetch(API_URL, { headers: {  } });
-    const data = await response.json();
-    
-    // Extrait les stats détaillées pour tous les modes
-    const snapshot = data.leaderboardStats || [];
-
-    // Sauvegarde dans /data/session.json
-    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
-    fs.writeFileSync(SESSION_FILE, JSON.stringify(snapshot, null, 2), 'utf8');
-
-    // Réponse HTTP → confirmation côté config.html
+    await createSessionSnapshot(id);
     res.json({ message: `Session démarrée pour ${id} à ${new Date().toLocaleTimeString()}` });
   } catch (err) {
     console.error(err);
@@ -161,4 +241,7 @@ app.listen(PORT, () => {
   console.log('➡️  Pages disponibles :');
   console.log(`   - Configuration : http://localhost:${PORT}/config.html`);
   console.log(`   - Overlay Streamlabs : http://localhost:${PORT}/overlay.html`);
+
+  // Tente un snapshot automatique au démarrage
+  autoSnapshot();
 });
